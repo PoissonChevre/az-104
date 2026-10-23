@@ -1,0 +1,434 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.48.1.52935",
+      "templateHash": "15322742970221975772"
+    }
+  },
+  "parameters": {
+    "vmCount": {
+      "type": "int",
+      "defaultValue": 1,
+      "metadata": {
+        "description": "Nombre de VMs à déployer."
+      }
+    },
+    "vmName": {
+      "type": "string",
+      "defaultValue": "vm",
+      "metadata": {
+        "description": "Nom (ou préfixe) des VMs."
+      }
+    },
+    "windowsVersion": {
+      "type": "string",
+      "defaultValue": "win11",
+      "allowedValues": [
+        "win11",
+        "win10"
+      ],
+      "metadata": {
+        "description": "Windows 11 Pro 24H2 ou Windows 10 Pro 22H2."
+      }
+    },
+    "vmSize": {
+      "type": "string",
+      "defaultValue": "Standard_D2als_v6",
+      "metadata": {
+        "description": "Taille de la VM (D2als_v6 = 2 vCPU / 4 Go AMD, testée OK en Belgium Central)."
+      }
+    },
+    "vmAdminUser": {
+      "type": "string",
+      "defaultValue": "azureuser",
+      "metadata": {
+        "description": "Utilisateur administrateur local."
+      }
+    },
+    "vmAdminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Mot de passe (12 caractères min, 3 types de caractères)."
+      }
+    },
+    "scriptName": {
+      "type": "string",
+      "defaultValue": "cse-vmGeneric.ps1",
+      "metadata": {
+        "description": "Script CSE à exécuter (seulement si scriptUris n'est pas vide)."
+      }
+    },
+    "scriptUris": {
+      "type": "array",
+      "defaultValue": [
+        "[format('https://raw.githubusercontent.com/jamesdplee/cloudlee-click2deploy/main/scripts/{0}', parameters('scriptName'))]"
+      ],
+      "metadata": {
+        "description": "URIs du script CSE CloudLee (installe Azure CLI dans la VM). Mettre [] pour ne rien exécuter."
+      }
+    },
+    "scriptArgs": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "vnetName": {
+      "type": "string",
+      "defaultValue": "vnet1"
+    },
+    "vnetAddressSpace": {
+      "type": "string",
+      "defaultValue": "10.10.0.0/16"
+    },
+    "vnetSubnetName": {
+      "type": "string",
+      "defaultValue": "subnet1"
+    },
+    "vnetSubnetSpace": {
+      "type": "string",
+      "defaultValue": "10.10.10.0/24"
+    },
+    "nsgName": {
+      "type": "string",
+      "defaultValue": "nsg1"
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]"
+    },
+    "createPublicIp": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Créer une IP publique par VM (false = IP privée uniquement, accès via Bastion/VPN)."
+      }
+    },
+    "createNatGateway": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Créer un NAT Gateway (avec sa propre IP publique) pour l'accès Internet sortant du subnet."
+      }
+    }
+  },
+  "variables": {
+    "images": {
+      "win11": {
+        "publisher": "MicrosoftWindowsDesktop",
+        "offer": "windows-11",
+        "sku": "win11-24h2-pro",
+        "version": "latest"
+      },
+      "win10": {
+        "publisher": "MicrosoftWindowsDesktop",
+        "offer": "Windows-10",
+        "sku": "win10-22h2-pro-g2",
+        "version": "latest"
+      }
+    },
+    "dnsLabelPrefix": "[toLower(format('{0}-{1}', parameters('vmName'), uniqueString(resourceGroup().id, parameters('vmName'))))]",
+    "scriptCmd": "[format('powershell -ExecutionPolicy Unrestricted -File {0} {1}', parameters('scriptName'), parameters('scriptArgs'))]",
+    "autoShutdownRegions": [
+      "westcentralus",
+      "southcentralus",
+      "centralus",
+      "qatarcentral",
+      "australiacentral",
+      "australiasoutheast",
+      "brazilsoutheast",
+      "canadacentral",
+      "centralindia",
+      "eastasia",
+      "eastus",
+      "francecentral",
+      "japaneast",
+      "koreacentral",
+      "northeurope",
+      "southafricanorth",
+      "switzerlandnorth",
+      "uaenorth",
+      "ukwest",
+      "westindia",
+      "australiacentral2",
+      "australiaeast",
+      "brazilsouth",
+      "canadaeast",
+      "eastus2",
+      "francesouth",
+      "germanywestcentral",
+      "japanwest",
+      "jioindiawest",
+      "koreasouth",
+      "northcentralus",
+      "norwayeast",
+      "southindia",
+      "southeastasia",
+      "swedencentral",
+      "switzerlandwest",
+      "uksouth",
+      "westeurope",
+      "westus",
+      "westus2",
+      "westus3"
+    ],
+    "deployAutoShutdown": "[contains(variables('autoShutdownRegions'), toLower(parameters('location')))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2023-11-01",
+      "name": "[parameters('nsgName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "allow-inbound-rdp",
+            "properties": {
+              "description": "RDP depuis partout (à restreindre à ton IP !)",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "3389",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 1100,
+              "direction": "Inbound"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "condition": "[parameters('createNatGateway')]",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "2023-11-01",
+      "name": "natgw1-ip",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Standard"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "Static"
+      }
+    },
+    {
+      "condition": "[parameters('createNatGateway')]",
+      "type": "Microsoft.Network/natGateways",
+      "apiVersion": "2023-11-01",
+      "name": "natgw1",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Standard"
+      },
+      "properties": {
+        "idleTimeoutInMinutes": 4,
+        "publicIpAddresses": [
+          {
+            "id": "[resourceId('Microsoft.Network/publicIPAddresses', 'natgw1-ip')]"
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/publicIPAddresses', 'natgw1-ip')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2023-11-01",
+      "name": "[parameters('vnetName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[parameters('vnetAddressSpace')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[parameters('vnetSubnetName')]",
+            "properties": {
+              "addressPrefix": "[parameters('vnetSubnetSpace')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('nsgName'))]"
+              },
+              "natGateway": "[if(parameters('createNatGateway'), createObject('id', resourceId('Microsoft.Network/natGateways', 'natgw1')), null())]"
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/natGateways', 'natgw1')]",
+        "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('nsgName'))]"
+      ]
+    },
+    {
+      "copy": {
+        "name": "pip",
+        "count": "[length(range(0, parameters('vmCount')))]"
+      },
+      "condition": "[parameters('createPublicIp')]",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "2023-11-01",
+      "name": "[format('{0}{1}-ip', parameters('vmName'), range(0, parameters('vmCount'))[copyIndex()])]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Standard"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "Static",
+        "dnsSettings": {
+          "domainNameLabel": "[format('{0}{1}', variables('dnsLabelPrefix'), range(0, parameters('vmCount'))[copyIndex()])]"
+        }
+      }
+    },
+    {
+      "copy": {
+        "name": "nic",
+        "count": "[length(range(0, parameters('vmCount')))]"
+      },
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2023-11-01",
+      "name": "[format('{0}{1}-nic', parameters('vmName'), range(0, parameters('vmCount'))[copyIndex()])]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": "[if(parameters('createPublicIp'), createObject('id', resourceId('Microsoft.Network/publicIPAddresses', format('{0}{1}-ip', parameters('vmName'), range(0, parameters('vmCount'))[range(0, parameters('vmCount'))[copyIndex()]]))), null())]",
+              "subnet": {
+                "id": "[reference(resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName')), '2023-11-01').subnets[0].id]"
+              }
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/publicIPAddresses', format('{0}{1}-ip', parameters('vmName'), range(0, parameters('vmCount'))[range(0, parameters('vmCount'))[copyIndex()]]))]",
+        "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+      ]
+    },
+    {
+      "copy": {
+        "name": "vm",
+        "count": "[length(range(0, parameters('vmCount')))]"
+      },
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "2024-03-01",
+      "name": "[format('{0}{1}', parameters('vmName'), range(0, parameters('vmCount'))[copyIndex()])]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[parameters('vmSize')]"
+        },
+        "osProfile": {
+          "computerName": "[format('{0}{1}', parameters('vmName'), range(0, parameters('vmCount'))[copyIndex()])]",
+          "adminUsername": "[parameters('vmAdminUser')]",
+          "adminPassword": "[parameters('vmAdminPassword')]"
+        },
+        "storageProfile": {
+          "imageReference": "[variables('images')[parameters('windowsVersion')]]",
+          "osDisk": {
+            "name": "[format('{0}{1}-disk', parameters('vmName'), range(0, parameters('vmCount'))[copyIndex()])]",
+            "caching": "ReadWrite",
+            "createOption": "FromImage",
+            "managedDisk": {
+              "storageAccountType": "StandardSSD_LRS"
+            },
+            "deleteOption": "Delete"
+          }
+        },
+        "securityProfile": {
+          "securityType": "TrustedLaunch",
+          "uefiSettings": {
+            "secureBootEnabled": true,
+            "vTpmEnabled": true
+          }
+        },
+        "licenseType": "Windows_Client",
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', format('{0}{1}-nic', parameters('vmName'), range(0, parameters('vmCount'))[range(0, parameters('vmCount'))[copyIndex()]]))]",
+              "properties": {
+                "deleteOption": "Delete"
+              }
+            }
+          ]
+        },
+        "diagnosticsProfile": {
+          "bootDiagnostics": {
+            "enabled": true
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkInterfaces', format('{0}{1}-nic', parameters('vmName'), range(0, parameters('vmCount'))[range(0, parameters('vmCount'))[copyIndex()]]))]"
+      ]
+    },
+    {
+      "copy": {
+        "name": "autoShutdown",
+        "count": "[length(range(0, parameters('vmCount')))]"
+      },
+      "condition": "[variables('deployAutoShutdown')]",
+      "type": "Microsoft.DevTestLab/schedules",
+      "apiVersion": "2018-09-15",
+      "name": "[format('shutdown-computevm-{0}{1}', parameters('vmName'), range(0, parameters('vmCount'))[copyIndex()])]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "status": "Enabled",
+        "taskType": "ComputeVmShutdownTask",
+        "dailyRecurrence": {
+          "time": "2300"
+        },
+        "timeZoneId": "Romance Standard Time",
+        "targetResourceId": "[resourceId('Microsoft.Compute/virtualMachines', format('{0}{1}', parameters('vmName'), range(0, parameters('vmCount'))[range(0, parameters('vmCount'))[copyIndex()]]))]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Compute/virtualMachines', format('{0}{1}', parameters('vmName'), range(0, parameters('vmCount'))[range(0, parameters('vmCount'))[copyIndex()]]))]"
+      ]
+    },
+    {
+      "copy": {
+        "name": "cse",
+        "count": "[length(range(0, parameters('vmCount')))]"
+      },
+      "condition": "[not(empty(parameters('scriptUris')))]",
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "apiVersion": "2023-09-01",
+      "name": "[format('{0}/{1}', format('{0}{1}', parameters('vmName'), range(0, parameters('vmCount'))[range(0, parameters('vmCount'))[copyIndex()]]), 'config-app')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "publisher": "Microsoft.Compute",
+        "type": "CustomScriptExtension",
+        "typeHandlerVersion": "1.10",
+        "autoUpgradeMinorVersion": true,
+        "settings": {},
+        "protectedSettings": {
+          "fileUris": "[parameters('scriptUris')]",
+          "commandToExecute": "[variables('scriptCmd')]"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Compute/virtualMachines', format('{0}{1}', parameters('vmName'), range(0, parameters('vmCount'))[range(0, parameters('vmCount'))[copyIndex()]]))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "fqdns": {
+      "type": "array",
+      "copy": {
+        "count": "[length(range(0, parameters('vmCount')))]",
+        "input": "[if(parameters('createPublicIp'), reference(resourceId('Microsoft.Network/publicIPAddresses', format('{0}{1}-ip', parameters('vmName'), range(0, parameters('vmCount'))[range(0, parameters('vmCount'))[copyIndex()]])), '2023-11-01').dnsSettings.fqdn, 'pas d''IP publique')]"
+      }
+    },
+    "natPublicIp": {
+      "type": "string",
+      "value": "[if(parameters('createNatGateway'), reference(resourceId('Microsoft.Network/publicIPAddresses', 'natgw1-ip'), '2023-11-01').ipAddress, 'pas de NAT Gateway')]"
+    }
+  }
+}

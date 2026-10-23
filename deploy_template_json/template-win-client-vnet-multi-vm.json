@@ -1,0 +1,277 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "vmCount": {
+      "type": "int",
+      "defaultValue": 1,
+      "minValue": 1,
+      "metadata": {
+        "description": "Nombre de VMs à déployer (vm0, vm1, ...)."
+      }
+    },
+    "vmName": {
+      "type": "string",
+      "defaultValue": "vm",
+      "metadata": {
+        "description": "Préfixe des VMs (vm -> vm0, vm1, ...)."
+      }
+    },
+    "windowsVersion": {
+      "type": "string",
+      "defaultValue": "win11",
+      "allowedValues": [
+        "win11",
+        "win10"
+      ],
+      "metadata": {
+        "description": "Windows 11 Pro 24H2 ou Windows 10 Pro 22H2."
+      }
+    },
+    "vmSize": {
+      "type": "string",
+      "defaultValue": "Standard_D2als_v6",
+      "metadata": {
+        "description": "Taille de la VM (D2als_v6 = 2 vCPU / 4 Go AMD, testée OK en Belgium Central)."
+      }
+    },
+    "vmAdminUser": {
+      "type": "string",
+      "defaultValue": "azureuser",
+      "metadata": {
+        "description": "Utilisateur administrateur local."
+      }
+    },
+    "vmAdminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Mot de passe (12 caractères min, 3 types de caractères)."
+      }
+    },
+    "vnetName": {
+      "type": "string",
+      "defaultValue": "vnet1",
+      "metadata": {
+        "description": "Nom du VNet à créer."
+      }
+    },
+    "vnetAddressSpace": {
+      "type": "string",
+      "defaultValue": "10.10.0.0/16"
+    },
+    "vnetSubnetName": {
+      "type": "string",
+      "defaultValue": "subnet1",
+      "metadata": {
+        "description": "Nom du subnet à créer dans le VNet."
+      }
+    },
+    "vnetSubnetSpace": {
+      "type": "string",
+      "defaultValue": "10.10.10.0/24"
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]"
+    }
+  },
+  "variables": {
+    "images": {
+      "win11": {
+        "publisher": "MicrosoftWindowsDesktop",
+        "offer": "windows-11",
+        "sku": "win11-24h2-pro",
+        "version": "latest"
+      },
+      "win10": {
+        "publisher": "MicrosoftWindowsDesktop",
+        "offer": "Windows-10",
+        "sku": "win10-22h2-pro-g2",
+        "version": "latest"
+      }
+    },
+    "autoShutdownRegions": [
+      "westcentralus",
+      "southcentralus",
+      "centralus",
+      "qatarcentral",
+      "australiacentral",
+      "australiasoutheast",
+      "brazilsoutheast",
+      "canadacentral",
+      "centralindia",
+      "eastasia",
+      "eastus",
+      "francecentral",
+      "japaneast",
+      "koreacentral",
+      "northeurope",
+      "southafricanorth",
+      "switzerlandnorth",
+      "uaenorth",
+      "ukwest",
+      "westindia",
+      "australiacentral2",
+      "australiaeast",
+      "brazilsouth",
+      "canadaeast",
+      "eastus2",
+      "francesouth",
+      "germanywestcentral",
+      "japanwest",
+      "jioindiawest",
+      "koreasouth",
+      "northcentralus",
+      "norwayeast",
+      "southindia",
+      "southeastasia",
+      "swedencentral",
+      "switzerlandwest",
+      "uksouth",
+      "westeurope",
+      "westus",
+      "westus2",
+      "westus3"
+    ],
+    "deployAutoShutdown": "[contains(variables('autoShutdownRegions'), toLower(parameters('location')))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2023-11-01",
+      "name": "[parameters('vnetName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[parameters('vnetAddressSpace')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[parameters('vnetSubnetName')]",
+            "properties": {
+              "addressPrefix": "[parameters('vnetSubnetSpace')]"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "copy": {
+        "name": "nic",
+        "count": "[parameters('vmCount')]"
+      },
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2023-11-01",
+      "name": "[format('{0}{1}-nic', parameters('vmName'), copyIndex())]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), parameters('vnetSubnetName'))]"
+              }
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+      ]
+    },
+    {
+      "copy": {
+        "name": "vm",
+        "count": "[parameters('vmCount')]"
+      },
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "2024-03-01",
+      "name": "[format('{0}{1}', parameters('vmName'), copyIndex())]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[parameters('vmSize')]"
+        },
+        "osProfile": {
+          "computerName": "[format('{0}{1}', parameters('vmName'), copyIndex())]",
+          "adminUsername": "[parameters('vmAdminUser')]",
+          "adminPassword": "[parameters('vmAdminPassword')]"
+        },
+        "storageProfile": {
+          "imageReference": "[variables('images')[parameters('windowsVersion')]]",
+          "osDisk": {
+            "name": "[format('{0}{1}-disk', parameters('vmName'), copyIndex())]",
+            "caching": "ReadWrite",
+            "createOption": "FromImage",
+            "managedDisk": {
+              "storageAccountType": "StandardSSD_LRS"
+            },
+            "deleteOption": "Delete"
+          }
+        },
+        "securityProfile": {
+          "securityType": "TrustedLaunch",
+          "uefiSettings": {
+            "secureBootEnabled": true,
+            "vTpmEnabled": true
+          }
+        },
+        "licenseType": "Windows_Client",
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', format('{0}{1}-nic', parameters('vmName'), copyIndex()))]",
+              "properties": {
+                "deleteOption": "Delete"
+              }
+            }
+          ]
+        },
+        "diagnosticsProfile": {
+          "bootDiagnostics": {
+            "enabled": true
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkInterfaces', format('{0}{1}-nic', parameters('vmName'), copyIndex()))]"
+      ]
+    },
+    {
+      "copy": {
+        "name": "autoShutdown",
+        "count": "[parameters('vmCount')]"
+      },
+      "condition": "[variables('deployAutoShutdown')]",
+      "type": "Microsoft.DevTestLab/schedules",
+      "apiVersion": "2018-09-15",
+      "name": "[format('shutdown-computevm-{0}{1}', parameters('vmName'), copyIndex())]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "status": "Enabled",
+        "taskType": "ComputeVmShutdownTask",
+        "dailyRecurrence": {
+          "time": "2300"
+        },
+        "timeZoneId": "Romance Standard Time",
+        "targetResourceId": "[resourceId('Microsoft.Compute/virtualMachines', format('{0}{1}', parameters('vmName'), copyIndex()))]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Compute/virtualMachines', format('{0}{1}', parameters('vmName'), copyIndex()))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "privateIps": {
+      "type": "array",
+      "copy": {
+        "count": "[parameters('vmCount')]",
+        "input": "[reference(resourceId('Microsoft.Network/networkInterfaces', format('{0}{1}-nic', parameters('vmName'), copyIndex())), '2023-11-01').ipConfigurations[0].properties.privateIPAddress]"
+      }
+    }
+  }
+}
