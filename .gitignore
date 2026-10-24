@@ -1,2 +1,3 @@
-# à vérifier avant publication
+# Stays on my machine: bulk-user CSV files (tenant name, passwords)
+local/
 users*.csv

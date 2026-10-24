@@ -6,8 +6,8 @@ az group create -n labo-rg1 -l belgiumcentral      # Crée le RG (sa région = c
 az group delete -n labo-rg1 --yes --no-wait        # Supprime tout en fin de lab
 
 # ── Templates ARM / Bicep ──
-az deployment group create -g labo-rg1 --template-file template-win-client.json
-az deployment group create -g labo-rg1 --template-file template-win-client.json \
+az deployment group create -g labo-rg1 --template-file templates/win-client-full.json
+az deployment group create -g labo-rg1 --template-file templates/win-client-full.json \
   --parameters createPublicIp=true                 # Surcharge un paramètre
 az group export -n labo-rg1 > export.json          # Exporte l'existant en ARM
 az bicep decompile --file template.json            # ARM JSON → Bicep
