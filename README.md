@@ -21,7 +21,7 @@ Exam domains (Microsoft study guide):
 - [x] 1. Entra ID Essentials
 - [x] 2. Identity and Access Management (IAM)
 - [x] 3. Entra ID Extended Services
-- [ ] 4. Virtual Networking (in progress)
+- [x] 4. Virtual Networking (in progress)
 - [ ] 5. Virtual Machines
 - [ ] 6. Storage
 - [ ] 7. Advanced Networking
@@ -35,7 +35,7 @@ Exam domains (Microsoft study guide):
 
 ## Repository content
 
-One note per chapter: key points, exam traps (⚠️) and commands.
+One note per chapter: key points, exam traps (**!**) and commands.
 
 | Folder / file | Content |
 |---|---|

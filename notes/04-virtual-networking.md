@@ -1,25 +1,25 @@
 # 4. Virtual Networking
 
-⚠️ = exam trap
+**!** = exam trap
 
 ## VNets and subnets
 
 - A VNet belongs to **one region** and **one subscription**. It has one or more address spaces (use RFC 1918 ranges).
-- ⚠️ Plan address spaces with **no overlap** with on-prem and other VNets. You need this later for peering and VPN.
-- ⚠️ Azure **reserves 5 IPs** in each subnet: `.0` (network), `.1` (gateway), `.2` and `.3` (Azure DNS), and the last one (broadcast).
+- **!** Plan address spaces with **no overlap** with on-prem and other VNets. You need this later for peering and VPN.
+- **!** Azure **reserves 5 IPs** in each subnet: `.0` (network), `.1` (gateway), `.2` and `.3` (Azure DNS), and the last one (broadcast).
   A /29 gives only **3** usable IPs, and the first VM gets `.4`.
 
 ## IP addresses
 
-- **Private IP**: dynamic (default) or static, set **on the NIC**. ⚠️ Never set a fixed IP inside the OS.
-- **Public IP**: ⚠️ **Standard SKU only** (Basic is retired) → always **static**, *secure by default* (closed until an NSG allows traffic), zone-redundant possible.
-- A public IP goes on a **NIC**, a **Load Balancer**, a **NAT Gateway**, **Bastion**, an **App Gateway**… ⚠️ **never on a subnet**.
+- **Private IP**: dynamic (default) or static, set **on the NIC**. **!** Never set a fixed IP inside the OS.
+- **Public IP**: **!** **Standard SKU only** (Basic is retired) → always **static**, *secure by default* (closed until an NSG allows traffic), zone-redundant possible.
+- A public IP goes on a **NIC**, a **Load Balancer**, a **NAT Gateway**, **Bastion**, an **App Gateway**… **!** **never on a subnet**.
 - **Public IP prefix**: a block of contiguous public IPs.
 
 ## NAT Gateway
 
 - Linked to a **subnet**. **Outbound only**.
-- ⚠️ For outbound traffic, it **wins** over the public IP of a VM.
+- **!** For outbound traffic, it **wins** over the public IP of a VM.
 - New VNets have **private subnets by default**: no implicit outbound access. You need a NAT Gateway, a public IP or a load balancer to reach the Internet.
 
 ## Network Security Groups (NSG)
@@ -36,7 +36,7 @@
 | 65500 `DenyAllInBound` | 65500 `DenyAllOutBound` |
 
 - Attach an NSG to a **subnet** and/or a **NIC**. One NSG per subnet or NIC, but one NSG can be reused. Same region as the resource.
-- ⚠️ NSG on **both** subnet and NIC → **both must allow** the traffic.
+- **!** NSG on **both** subnet and NIC → **both must allow** the traffic.
   - Inbound: **subnet** NSG first, then **NIC** NSG.
   - Outbound: **NIC** NSG first, then **subnet** NSG.
 - Troubleshoot: *Effective security rules* on the NIC, and **IP flow verify** (Network Watcher).
@@ -46,7 +46,7 @@
 - One rule can have **several IPs or ranges** and **several ports**.
 - **Service tags**: names for Azure IP ranges (`Internet`, `VirtualNetwork`, `AzureLoadBalancer`, `Storage`, `Sql`…). No IP list to maintain.
 - **ASG** (Application Security Group): group NICs by role (`asg-web`, `asg-db`) and use the ASG as source or destination in rules.
-  ⚠️ All NICs in an ASG must be in the **same VNet**.
+  **!** All NICs in an ASG must be in the **same VNet**.
 
 ## Commands
 

@@ -1,6 +1,6 @@
 # 3. Entra ID Extended Services
 
-⚠️ = exam trap
+**!** = exam trap
 
 Starting point: the company has a directory **in the office** (Active Directory) and a directory **in the cloud** (Entra ID).
 
@@ -17,13 +17,13 @@ How the password is checked:
 | **Federation** (AD FS) | The office handles the whole sign-in. | Heavy and complex. |
 
 - **Writeback** = cloud → office. Mostly for passwords changed with SSPR.
-- ⚠️ A synced account is **edited in on-prem AD**, not in the Azure portal.
+- **!** A synced account is **edited in on-prem AD**, not in the Azure portal.
 
 **Entra Domain Services**: a **managed AD** in Azure (LDAP, Kerberos, NTLM, GPO) for old apps that need a classic domain. No domain controller to manage.
 
-- ⚠️ It needs its **own subnet**.
-- ⚠️ You are **not Domain Admin**: you only get the *AAD DC Administrators* group.
-- ⚠️ Cloud users must **change their password once** before they can use it.
+- **!** It needs its **own subnet**.
+- **!** You are **not Domain Admin**: you only get the *AAD DC Administrators* group.
+- **!** Cloud users must **change their password once** before they can use it.
 - Don't mix them up: Entra Connect **copies** your existing AD. Domain Services **gives you** a new AD in Azure.
 
 ## External identities
@@ -39,11 +39,11 @@ How the password is checked:
 ## Access control (P1)
 
 - **Conditional Access**: **IF** user/group, app, location/IP, device, risk… **THEN** block, or allow with MFA, compliant device…
-  - ⚠️ Turn off **Security defaults** first (they can't be used together).
+  - **!** Turn off **Security defaults** first (they can't be used together).
   - **Report-only** mode: logs what the policy would do, without blocking. Use it to test.
 - **SSPR** (self-service password reset): users reset their own password.
   - Enabled for **None / Selected group / All**. **1 or 2** methods required. Users must **register** first.
-  - ⚠️ Synced users → enable **password writeback** (Entra Connect), or the new password won't work on-prem.
+  - **!** Synced users → enable **password writeback** (Entra Connect), or the new password won't work on-prem.
 - **App Proxy**: publishes an **on-prem web app** to remote users. A **connector** on an office server makes **outbound** connections only: **no inbound port** to open. Works with Entra sign-in, MFA and Conditional Access.
 
 ## Governance (P2)
@@ -63,21 +63,21 @@ Each level includes the one before: **Free ⊂ P1 ⊂ P2 ⊂ ID Governance**.
 
 | Feature | Free | P1 | P2 | ID Gov |
 |---|:-:|:-:|:-:|:-:|
-| Users, assigned groups, B2B, Security defaults | ✅ | ✅ | ✅ | ✅ |
-| Dynamic groups, group-based licensing | | ✅ | ✅ | ✅ |
-| Conditional Access, SSPR, password writeback | | ✅ | ✅ | ✅ |
-| App Proxy, automatic user provisioning | | ✅ | ✅ | ✅ |
-| Custom Entra roles, roles scoped to an AU | | ✅ | ✅ | ✅ |
-| ID Protection, PIM | | | ✅ | ✅ |
-| Access reviews (basic), access packages | | | ✅ | ✅ |
-| Lifecycle workflows (joiner / mover / leaver) | | | | ✅ |
-| Access reviews: inactive users, AI suggestions, PIM for groups | | | | ✅ |
-| Entitlement management: advanced options | | | | ✅ |
+| Users, assigned groups, B2B, Security defaults | ✓ | ✓ | ✓ | ✓ |
+| Dynamic groups, group-based licensing | | ✓ | ✓ | ✓ |
+| Conditional Access, SSPR, password writeback | | ✓ | ✓ | ✓ |
+| App Proxy, automatic user provisioning | | ✓ | ✓ | ✓ |
+| Custom Entra roles, roles scoped to an AU | | ✓ | ✓ | ✓ |
+| ID Protection, PIM | | | ✓ | ✓ |
+| Access reviews (basic), access packages | | | ✓ | ✓ |
+| Lifecycle workflows (joiner / mover / leaver) | | | | ✓ |
+| Access reviews: inactive users, AI suggestions, PIM for groups | | | | ✓ |
+| Entitlement management: advanced options | | | | ✓ |
 
 - **P1** = **control access**: Conditional Access, SSPR, App Proxy, dynamic groups.
 - **P2** = **risk** + **basic governance**: ID Protection, PIM, access reviews, access packages.
 - **ID Governance** = the **extras**: lifecycle workflows, inactive users, AI.
-- ⚠️ PIM, access reviews and access packages are **P2**, not ID Governance.
+- **!** PIM, access reviews and access packages are **P2**, not ID Governance.
 
 ## Which tool? (exam style)
 
