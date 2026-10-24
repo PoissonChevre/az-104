@@ -18,10 +18,10 @@ Exam domains (Microsoft study guide):
 
 ## Course progress
 
-- [ ] 1. Entra ID Essentials
-- [ ] 2. Identity and Access Management (IAM)
-- [ ] 3. Entra ID Extended Services
-- [ ] 4. Virtual Networking
+- [x] 1. Entra ID Essentials
+- [x] 2. Identity and Access Management (IAM)
+- [x] 3. Entra ID Extended Services
+- [ ] 4. Virtual Networking (in progress)
 - [ ] 5. Virtual Machines
 - [ ] 6. Storage
 - [ ] 7. Advanced Networking
@@ -35,18 +35,21 @@ Exam domains (Microsoft study guide):
 
 ## Repository content
 
-My notes are in French (my native language).
+One note per chapter: key points, exam traps (⚠️) and commands.
 
 | Folder / file | Content |
 |---|---|
-| [notes/summary.md](./notes/summary.md) | Summary of the 13 chapters: key ideas, exam traps, commands |
-| [notes/identity-iam-networking.md](./notes/identity-iam-networking.md) | Chapters 1–4 in more detail |
-| [notes/entra-extended-simple.md](./notes/entra-extended-simple.md) | Chapter 3 in simple words |
-| [notes/entra-licenses.md](./notes/entra-licenses.md) | Entra ID licenses: Free, P1, P2, ID Governance |
-| [notes/entra-licenses-quiz.md](./notes/entra-licenses-quiz.md) | Licenses quiz, with answers |
-| [notes/az-cli-commands.md](./notes/az-cli-commands.md) | Azure CLI commands used in the labs |
+| [notes/01-entra-id-essentials.md](./notes/01-entra-id-essentials.md) | Tenant, domains, users, groups, administrative units, app and managed identities |
+| [notes/02-identity-access-management.md](./notes/02-identity-access-management.md) | Azure RBAC vs Entra roles, key roles, custom roles |
+| [notes/03-entra-id-extended-services.md](./notes/03-entra-id-extended-services.md) | Hybrid identity, B2B/B2C, Conditional Access, SSPR, governance, licenses, quiz |
+| [notes/04-virtual-networking.md](./notes/04-virtual-networking.md) | VNets, subnets, IP addresses, NAT Gateway, NSG, ASG |
+| [notes/lab-commands.md](./notes/lab-commands.md) | General Azure CLI commands for the labs |
 | [templates/](./templates/) | ARM templates to deploy lab VMs (based on [CloudLee click-to-deploy](https://github.com/jamesdplee/cloudlee-click2deploy)) |
 | [images/study-topics-mindmap.png](./images/study-topics-mindmap.png) | Mind map of the exam topics |
+
+## Study method
+
+After each chapter: CloudLee quiz + one lab with the Azure CLI. Then the Microsoft Practice Assessment. Only work again on topics under 80 %.
 
 ## Resources
 
