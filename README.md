@@ -6,7 +6,7 @@
 
 The AZ-104 exam validates the skills to manage an Azure environment: identities, governance, storage, compute, networking, monitoring and backup.
 
-Exam domains (Microsoft study guide):
+## Exam domains
 
 | Domain | Weight |
 |---|---|
@@ -33,7 +33,7 @@ Exam domains (Microsoft study guide):
 - [ ] 13. Monitoring
 - [ ] Exam
 
-## Repository content
+## My notes
 
 One note per chapter: key points, exam traps (**!**) and commands.
 
@@ -50,6 +50,13 @@ One note per chapter: key points, exam traps (**!**) and commands.
 ## Study method
 
 After each chapter: CloudLee quiz + one lab with the Azure CLI. Then the Microsoft Practice Assessment. Only work again on topics under 80 %.
+
+## Takeaways
+
+So far (chapters 1–3):
+
+- Identity comes first in Azure: Entra ID, RBAC and licenses come back in every chapter.
+- Know which license (Free, P1, P2) each feature needs: it is a frequent exam trap.
 
 ## Resources
 
